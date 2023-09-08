@@ -1,5 +1,5 @@
 # AWSMonitoring
-Monitoring
+Monitoring Python script
 import boto3
 
 # Initialize the CloudWatch and CloudTrail clients
