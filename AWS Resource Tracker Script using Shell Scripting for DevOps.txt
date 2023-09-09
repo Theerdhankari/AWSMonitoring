@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Set your variables
+INSTANCE_ID="your-instance-id"
+THRESHOLD=80
+EVALUATION_PERIODS=5
+ALARM_NAME="HighCPUUtilization-$INSTANCE_ID"
+CONTACT_GROUP="your-nagios-contact-group"
+
+# Create the CloudWatch alarm for high CPU utilization
+aws cloudwatch put-metric-alarm \
+  --alarm-name "$ALARM_NAME" \
+  --comparison-operator GreaterThanOrEqualToThreshold \
+  --evaluation-periods $EVALUATION_PERIODS \
+  --metric-name CPUUtilization \
+  --namespace AWS/EC2 \
+  --period 60 \
+  --statistic SampleCount \
+  --threshold $THRESHOLD \
+  --alarm-actions "arn:aws:sns:us-east-1:123456789012:my-sns-topic" \
+  --alarm-description "Alarm for high CPU utilization on instance $INSTANCE_ID" \
+  --dimensions "Name=InstanceId,Value=$INSTANCE_ID" \
+  --unit Percent
+
+# Create the Nagios service check
+cat << EOF > /usr/local/nagios/etc/objects/aws.cfg
+define service {
+    use                 generic-service
+    host_name           your-aws-host
+    service_description AWS CPU Utilization
+    check_command       check_aws_cpu_utilization!$INSTANCE_ID!$THRESHOLD!$EVALUATION_PERIODS
+    contact_groups      $CONTACT_GROUP
+}
+EOF
+
+# Create the Nagios command
+cat << EOF > /usr/local/nagios/libexec/check_aws_cpu_utilization
+#!/bin/bash
+
+INSTANCE_ID=\$1
+THRESHOLD=\$2
+EVALUATION_PERIODS=\$3
+
+CPU_UTILIZATION=\$(aws cloudwatch get-metric-statistics \
+  --metric-name CPUUtilization \
+  --namespace AWS/EC2 \
+  --start-time \$(date -u +%Y-%m-%dT%TZ --date '-5 minutes') \
+  --end-time \$(date -u +%Y-%m-%dT%TZ) \
+  --period 60 \
+  --statistics SampleCount \
+  --dimensions "Name=InstanceId,Value=\$INSTANCE_ID" \
+  --query "Datapoints[0].SampleCount")
+
+if [ "\$CPU_UTILIZATION" -ge "\$THRESHOLD" ]; then
+  echo "CPU utilization on instance \$INSTANCE_ID is above threshold (\$CPU_UTILIZATION >= \$THRESHOLD)"
+  exit 2
+else
+  echo "CPU utilization on instance \$INSTANCE_ID is below threshold (\$CPU_UTILIZATION < \$THRESHOLD)"
+  exit 0
+fi
+EOF
+
+# Make the Nagios command executable
+chmod +x /usr/local/nagios/libexec/check_aws_cpu_utilization

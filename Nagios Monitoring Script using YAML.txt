@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nagios-config
+data:
+  commands.cfg: |
+    define command {
+      command_name check_aws_cpu_utilization
+      command_line /usr/local/nagios/libexec/check_aws_cpu_utilization $ARG1$ $ARG2$ $ARG3$
+    }
+  services.cfg: |
+    define service {
+      use                 generic-service
+      host_name           your-aws-host
+      service_description AWS CPU Utilization
+      check_command       check_aws_cpu_utilization!your-instance-id!80!5
+      contact_groups      your-nagios-contact-group
+    }

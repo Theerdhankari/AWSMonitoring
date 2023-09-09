@@ -1,0 +1,21 @@
+import requests
+import json
+
+# Set your variables
+DATADOG_API_KEY = "your-datadog-api-key"
+DATADOG_APP_KEY = "your-datadog-app-key"
+SEARCH_QUERY = "aws.ec2.cpuutilization{*}"
+
+# Connect to Data Dog
+url = "https://api.datadoghq.com/api/v1/query"
+params = {
+    "api_key": DATADOG_API_KEY,
+    "application_key": DATADOG_APP_KEY,
+    "query": SEARCH_QUERY
+}
+response = requests.get(url, params=params)
+response_json = json.loads(response.text)
+
+# Print the results
+for result in response_json["series"]:
+    print(json.dumps(result, indent=2))

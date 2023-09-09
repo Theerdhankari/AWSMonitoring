@@ -1,0 +1,20 @@
+YAML
+---
+Resources:
+  PipelineStateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Alarm for AWS CodePipeline state change"
+      AlarmActions:
+        - !Ref SnsTopicArn
+      MetricName: State
+      Namespace: AWS/CodePipeline
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: PipelineName
+          Value: !Ref PipelineName
+      Unit: Count

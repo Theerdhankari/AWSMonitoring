@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: splunk-config
+data:
+  inputs.conf: |
+    [aws-cloudwatch-logs]
+    disabled = 0
+    index = aws
+    sourcetype = aws:cloudwatch:logs:json
+    interval = 60
+    start_from = -1m
+    aws_account = your-aws-account-id
+    aws_region = your-aws-region
+    aws_access_key_id = your-aws-access-key-id
+    aws_secret_access_key = your-aws-secret-access-key
+    log_group = your-log-group
+    log_stream_prefix = your-log-stream-prefix
+  outputs.conf: |
+    [tcpout]
+    defaultGroup = splunk-indexer
+    indexAndForward = 1
+
+    [tcpout:splunk-indexer]
+    server = your-splunk-indexer:9997

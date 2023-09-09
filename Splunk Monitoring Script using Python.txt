@@ -1,0 +1,42 @@
+import splunklib.client as client
+import splunklib.results as results
+import json
+
+# Set your variables
+HOST = "your-splunk-host"
+PORT = 8089
+USERNAME = "your-splunk-username"
+PASSWORD = "your-splunk-password"
+SEARCH_QUERY = "search index=aws sourcetype=aws:cloudwatch:logs:json | stats count by logStream"
+
+# Connect to Splunk
+service = client.connect(
+    host=HOST,
+    port=PORT,
+    username=USERNAME,
+    password=PASSWORD
+)
+
+# Run the search query
+job = service.jobs.create(SEARCH_QUERY)
+while True:
+    while not job.is_ready():
+        pass
+    stats = {"isDone": job["isDone"],
+             "doneProgress": float(job["doneProgress"]) * 100,
+             "scanCount": int(job["scanCount"]),
+             "eventCount": int(job["eventCount"]),
+             "resultCount": int(job["resultCount"])}
+    status = ("\r%(doneProgress)03.1f%% %(scanCount)d scanned "
+              "%(eventCount)d matched %(resultCount)d results") % stats
+    print(status)
+    if stats["isDone"] == "1":
+        print("\nSearch completed\n")
+        break
+    time.sleep(2)
+
+# Get the results
+results = job.results()
+reader = results.ResultsReader(results)
+for result in reader:
+    print(json.dumps(result, indent=2))
